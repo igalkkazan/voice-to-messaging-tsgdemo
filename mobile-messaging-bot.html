@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Mobile Messenger</title>
+</head>
+
+<body>
+
+  <!-- jQuery ללא integrity כדי למנוע חסימה -->
+  <script src="https://code.jquery.com/jquery-3.6.4.slim.min.js"></script>
+
+  <script type="text/javascript" charset="utf-8">
+    // --- BOOTSTRAP: Genesys Messenger ---
+
+    (function (g, e, n, es, ys) {
+      g['_genesysJs'] = e;
+      g[e] = g[e] || function () {
+        (g[e].q = g[e].q || []).push(arguments);
+      };
+      g[e].t = 1 * new Date();
+      g[e].c = es;
+      ys = document.createElement('script');
+      ys.async = 1;
+      ys.src = n;
+      ys.charset = 'utf-8';
+      document.head.appendChild(ys);
+    })(
+      window,
+      'Genesys',
+      // חשוב: אזור אירלנד (.ie) ולא .com
+      'https://apps.mypurecloud.ie/genesys-bootstrap/genesys.min.js',
+      {
+        // הסביבה האמיתית שלך
+        environment: 'prod-euw1',
+        // ה-deployment של TSGSupport_Test
+        deploymentId: '10099376-796f-4ef4-8bf8-dbb4dc18d507'
+      }
+    );
+
+    // --- LOCAL VARS -------------------------------------------------
+    let conversationId, participantId, region;
+    region = "use1"; // לא באמת קריטי כרגע
+
+    // jQuery document.ready
+    $(function () {
+      console.log('[SWITCH] Document ready');
+      initialize().then(() => {
+        initializeMessenger();
+      });
+    });
+
+    async function initialize() {
+      getQueryStringParams();
+      return true;
+    }
+
+    // קורא cId ו-pId מה-URL
+    function getQueryStringParams() {
+      console.log('[SWITCH] getQueryStringParams');
+      const urlParams = new URLSearchParams(window.location.search);
+
+      conversationId = urlParams.get('cId');
+      participantId = urlParams.get('pId');
+
+      console.log('[SWITCH] Voice IDs detected:');
+      console.log('ogConversationId:', conversationId);
+      console.log('ogParticipantId:', participantId);
+    }
+
+    // בונה אובייקט PD ושומר ב-Messenger DB
+    const copyOGIds = () => {
+      console.log('[SWITCH] copyOGIds()');
+      const newAttributes = {
+        ogConversationId: conversationId,
+        ogParticipantId: participantId
+      };
+
+      updateMessengerDatabase(newAttributes);
+    };
+
+    // Database.update
+    function updateMessengerDatabase(attributes) {
+      const messaging = {
+        customAttributes: attributes
+      };
+      console.log('[SWITCH] updating messenger database:', JSON.stringify(messaging));
+      Genesys("command", "Database.update", { messaging });
+      console.log('[SWITCH] database updated (command sent)');
+    }
+
+    // רישום subscribe-ים ל-Messenger
+    const initializeMessenger = () => {
+      Genesys('subscribe', 'Journey.ready', () => {
+        console.log('[SWITCH] Journey.ready');
+        Genesys('command', 'Journey.formsTrack', {});
+      });
+
+      Genesys('subscribe', 'Messenger.ready', () => {
+        console.log('[SWITCH] Messenger.ready – copying OG IDs to DB');
+        copyOGIds();
+      });
+
+      Genesys("subscribe", "Database.updated", function (e) {
+        console.log('[SWITCH] Database.updated:', e.data);
+        // אם תרצה לפתוח את החלון אוטומטית:
+        // Genesys("command", "Messenger.open");
+      });
+
+      Genesys("subscribe", "MessagingService.started", function ({ data }) {
+        console.log('[SWITCH] MessagingService.started:', data);
+      });
+
+      console.log('[SWITCH] Messenger routine initialized');
+      return true;
+    };
+  </script>
+
+</body>
+</html>
