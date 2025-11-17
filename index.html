@@ -2,12 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; URL=mobile-messaging-bot.html" />
   <title>Redirecting…</title>
-
   <script>
-    // JavaScript redirect (backup if meta tag fails)
-    window.location.replace("mobile-messaging-bot.html");
+    var qs = window.location.search || "";
+    window.location.replace("mobile-messaging-bot.html" + qs);
   </script>
 </head>
 <body>
